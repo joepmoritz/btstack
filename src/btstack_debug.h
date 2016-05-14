@@ -61,6 +61,10 @@ static inline void __log_unused(const char *format, ...) {}
 #ifndef BTSTACK_PRINTF
 #ifdef __AVR__
 #define BTSTACK_PRINTF(format, ...)          printf_P(PSTR(format), ## __VA_ARGS__)
+#elif __ANDROID__
+#include <android/log.h>
+#define HCI_DUMP_LOG(log_level, format, ...) hci_dump_log(log_level, format, ## __VA_ARGS__)
+#define BTSTACK_PRINTF(format, ...)          __android_log_print(ANDROID_LOG_VERBOSE, "BTStack", format, ## __VA_ARGS__)
 #else
 #define BTSTACK_PRINTF(format, ...)          printf(format, ## __VA_ARGS__)
 #endif
