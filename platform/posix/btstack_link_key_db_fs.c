@@ -45,7 +45,8 @@
 
 #include "btstack_util.h"
 
-#define LINK_KEY_PATH "/tmp/"
+// #define LINK_KEY_PATH "/tmp/"
+#define LINK_KEY_PATH "/data/Spraakvanger_btstack/"
 #define LINK_KEY_PREFIX "btstack_link_key_"
 #define LINK_KEY_SUFIX ".txt"
 
