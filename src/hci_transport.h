@@ -149,6 +149,8 @@ void hci_transport_h5_set_auto_sleep(uint16_t inactivity_timeout_ms);
  */
 const hci_transport_t * hci_transport_usb_instance(void);
 
+void set_usb_bt_device_skip(int skip);
+
 
 /* API_END */
     

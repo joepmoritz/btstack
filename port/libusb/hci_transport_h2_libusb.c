@@ -183,6 +183,9 @@ static int acl_out_addr;
 static int sco_in_addr;
 static int sco_out_addr;
 
+// when scanning for bt device, skip the first N devices found
+static int bt_device_skip = 0;
+
 
 #ifdef ENABLE_SCO_OVER_HCI
 static void sco_ring_init(void){
@@ -537,6 +540,7 @@ static void scan_for_bt_endpoints(void) {
 // returns index of found device or -1
 static int scan_for_bt_device(libusb_device **devs, int start_index) {
     int i;
+    int skip_remaining = bt_device_skip;
     for (i = start_index; devs[i] ; i++){
         dev = devs[i];
         int r = libusb_get_device_descriptor(dev, &desc);
@@ -555,13 +559,14 @@ static int scan_for_bt_device(libusb_device **devs, int start_index) {
         // The SubClass code (bDeviceSubClass) is 0x01 – RF Controller. 
         // The Protocol code (bDeviceProtocol) is 0x01 – Bluetooth programming.
         // if (desc.bDeviceClass == 0xe0 && desc.bDeviceSubClass == 0x01 && desc.bDeviceProtocol == 0x01){
-        if (desc.bDeviceClass == 0xE0 && desc.bDeviceSubClass == 0x01 && desc.bDeviceProtocol == 0x01) {
-            return i;
-        }
+        if (desc.bDeviceClass == 0xE0 && desc.bDeviceSubClass == 0x01 && desc.bDeviceProtocol == 0x01 ||
+            // Detect USB Dongle based on whitelist
+            is_known_bt_device(desc.idVendor, desc.idProduct))
+        {
+            if (skip_remaining-- <= 0) {
+                return i;
+            }
 
-        // Detect USB Dongle based on whitelist
-        if (is_known_bt_device(desc.idVendor, desc.idProduct)) {
-            return i;
         }
     }
     return -1;
@@ -1021,6 +1026,10 @@ static void usb_register_packet_handler(void (*handler)(uint8_t packet_type, uin
 }
 
 static void dummy_handler(uint8_t packet_type, uint8_t *packet, uint16_t size){
+}
+
+void set_usb_bt_device_skip(int skip) {
+    bt_device_skip = skip;
 }
 
 // get usb singleton
