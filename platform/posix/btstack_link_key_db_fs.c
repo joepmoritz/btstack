@@ -51,7 +51,7 @@
 #define LINK_KEY_SUFIX ".txt"
 
 static char keypath[sizeof(LINK_KEY_PATH) + sizeof(LINK_KEY_PREFIX) + 17 + sizeof(LINK_KEY_SUFIX) + 1 + 1];
-static char keynumber = '?';
+static char keynumber[2] = {'?', 0};
 
 static char bd_addr_to_dash_str_buffer[6*3];  // 12-45-78-01-34-67\0
 static char * bd_addr_to_dash_str(bd_addr_t addr){
@@ -70,12 +70,12 @@ static void set_path(bd_addr_t bd_addr){
     strcpy(keypath, LINK_KEY_PATH);
     strcat(keypath, LINK_KEY_PREFIX);
     strcat(keypath, bd_addr_to_dash_str(bd_addr));
-    strcat(keypath, &keynumber);
+    strcat(keypath, keynumber);
     strcat(keypath, LINK_KEY_SUFIX);
 }
 
 void link_key_set_db_number(char c){
-    keynumber = c;
+    keynumber[0] = c;
 }
 
 
