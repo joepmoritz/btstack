@@ -72,6 +72,12 @@ char *link_key_type_to_str(link_key_type_t link_key_type);
  */
 int sscanf_link_key(char * addr_string, link_key_t link_key);
 
+/**
+ * @brief Set db number. This adds this character to link key filenames.
+ * @param c Character to add
+ */
+void link_key_set_db_number(char c);
+
 /* API_END */
 
 #if defined __cplusplus
