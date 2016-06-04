@@ -120,7 +120,7 @@ static void set_path(bd_addr_t bd_addr){
 }
 
 void link_key_set_db_number(char c){
-    keynumber = c;
+    keynumber[0] = c;
 }
 
 
