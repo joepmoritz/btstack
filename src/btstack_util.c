@@ -54,7 +54,7 @@
  * @brief Compare two Bluetooth addresses
  * @param a
  * @param b
- * @return true if equal
+ * @return 0 if equal
  */
 int bd_addr_cmp(bd_addr_t a, bd_addr_t b){
     return memcmp(a,b, BD_ADDR_LEN);
@@ -131,6 +131,9 @@ void reverse_64(const uint8_t * src, uint8_t * dst){
 }
 void reverse_128(const uint8_t * src, uint8_t * dst){
     reverse_bytes(src, dst, 16);
+}
+void reverse_256(const uint8_t * src, uint8_t * dst){
+    reverse_bytes(src, dst, 32);
 }
 
 void reverse_bd_addr(const bd_addr_t src, bd_addr_t dest){
@@ -261,7 +264,7 @@ int sscanf_bd_addr(const char * addr_string, bd_addr_t addr){
         int single_byte = scan_hex_byte(addr_string);
         if (single_byte < 0) break;
         addr_string += 2;
-        addr[i] = single_byte;
+        buffer[i] = single_byte;
         // don't check seperator after last byte
         if (i == BD_ADDR_LEN - 1) {
             result = 1;

@@ -1027,20 +1027,10 @@ static int rfcomm_hci_event_handler(uint8_t *packet, uint16_t size){
             log_info("L2CAP_EVENT_CHANNEL_CLOSED cid 0x%0x, mult %p", l2cap_cid, multiplexer);
             if (!multiplexer) break;
             log_info("L2CAP_EVENT_CHANNEL_CLOSED state %u", multiplexer->state);
-            switch (multiplexer->state) {
-                case RFCOMM_MULTIPLEXER_W4_CONNECT:
-                case RFCOMM_MULTIPLEXER_SEND_SABM_0:
-                case RFCOMM_MULTIPLEXER_W4_SABM_0:
-                case RFCOMM_MULTIPLEXER_SEND_UA_0:
-                case RFCOMM_MULTIPLEXER_W4_UA_0:
-                case RFCOMM_MULTIPLEXER_OPEN:
-                    // don't call l2cap_disconnect as it's alreay closed
-                    rfcomm_multiplexer_finalize(multiplexer);
-                    return 1;
-                default:
-                    break;
-            }
-            break;
+            // no need to call l2cap_disconnect here, as it's already closed
+            rfcomm_multiplexer_finalize(multiplexer);
+            return 1;
+
         default:
             break;
     }
@@ -2197,6 +2187,7 @@ static uint8_t rfcomm_channel_create_internal(btstack_packet_handler_t packet_ha
     
     // create new multiplexer if necessary
     uint8_t status = 0;
+    uint8_t dlci = 0;
     int new_multiplexer = 0;
     rfcomm_channel_t * channel = NULL;
     rfcomm_multiplexer_t * multiplexer = rfcomm_multiplexer_for_addr(addr);
@@ -2211,6 +2202,14 @@ static uint8_t rfcomm_channel_create_internal(btstack_packet_handler_t packet_ha
         new_multiplexer = 1;
     }
     
+    // check if channel for this remote service already exists
+    dlci = (server_channel << 1) | (multiplexer->outgoing ^ 1);
+    channel = rfcomm_channel_for_multiplexer_and_dlci(multiplexer, dlci);
+    if (channel){
+        status = RFCOMM_CHANNEL_ALREADY_REGISTERED;
+        goto fail;
+    }
+
     // prepare channel
     channel = rfcomm_channel_create(multiplexer, NULL, server_channel);
     if (!channel){
