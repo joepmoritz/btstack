@@ -178,6 +178,13 @@ int bd_addr_cmp(bd_addr_t a, bd_addr_t b);
 void bd_addr_copy(bd_addr_t dest, bd_addr_t src);
 
 /**
+ * @brief Copy link key
+ * @param dest
+ * @param src
+ */
+void link_key_copy(link_key_t dest, link_key_t src);
+
+/**
  * @brief Use printf to write hexdump as single line of data
  */
 void printf_hexdump(const void *data, int size);
