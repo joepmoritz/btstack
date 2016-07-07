@@ -106,7 +106,6 @@ static void att_handle_value_indication_notify_client(uint8_t status, uint16_t c
     little_endian_store_16(event, pos, client_handle);
     pos += 2;
     little_endian_store_16(event, pos, attribute_handle);
-    pos += 2;
     (*att_client_packet_handler)(HCI_EVENT_PACKET, 0, &event[0], sizeof(event));
 }
 
@@ -120,7 +119,6 @@ static void att_emit_mtu_event(hci_con_handle_t con_handle, uint16_t mtu){
     little_endian_store_16(event, pos, con_handle);
     pos += 2;
     little_endian_store_16(event, pos, mtu);
-    pos += 2;
     (*att_client_packet_handler)(HCI_EVENT_PACKET, 0, &event[0], sizeof(event));
 }
 
@@ -326,7 +324,7 @@ static void att_run(void){
                 log_info("Orig Signature: ");
                 log_info_hexdump( &att_request_buffer[att_request_size-8], 8);
                 uint16_t attribute_handle = little_endian_read_16(att_request_buffer, 1);
-                sm_cmac_start(csrk, att_request_buffer[0], attribute_handle, att_request_size - 15, &att_request_buffer[3], counter_packet, att_signed_write_handle_cmac_result);
+                sm_cmac_signed_write_start(csrk, att_request_buffer[0], attribute_handle, att_request_size - 15, &att_request_buffer[3], counter_packet, att_signed_write_handle_cmac_result);
                 return;
             } 
 
