@@ -69,6 +69,16 @@ void bd_addr_copy(bd_addr_t dest, bd_addr_t src){
     memcpy(dest,src,BD_ADDR_LEN);
 }
 
+/**
+ * @brief Copy link key
+ * @param dest
+ * @param src
+ */
+void link_key_copy(link_key_t dest, link_key_t src){
+    memcpy(dest,src,LINK_KEY_LEN);
+}
+
+
 uint16_t little_endian_read_16(const uint8_t * buffer, int pos){
     return ((uint16_t) buffer[pos]) | (((uint16_t)buffer[(pos)+1]) << 8);
 }
