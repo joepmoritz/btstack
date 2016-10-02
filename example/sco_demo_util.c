@@ -49,7 +49,7 @@
 
 
 // SCO demo configuration
-#define SCO_DEMO_MODE SCO_DEMO_MODE_ASCII
+#define SCO_DEMO_MODE SCO_DEMO_MODE_SINE
 #define SCO_REPORT_PERIOD 100
 
 #ifdef HAVE_POSIX_FILE_IO
