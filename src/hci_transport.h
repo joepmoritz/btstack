@@ -151,6 +151,10 @@ const hci_transport_t * hci_transport_usb_instance(void);
 
 void set_usb_bt_device_skip(int skip);
 
+/**
+ * @brief Specify USB Bluetooth device via port numbers from root to device
+ */
+void hci_transport_usb_set_path(int len, uint8_t * port_numbers);
 
 /* API_END */
     

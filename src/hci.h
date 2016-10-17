@@ -303,6 +303,7 @@ typedef enum {
     SM_INITIATOR_PH3_SEND_START_ENCRYPTION,
 
     // LE Secure Connections
+    SM_SC_RECEIVED_LTK_REQUEST,
     SM_SC_SEND_PUBLIC_KEY_COMMAND,
     SM_SC_W4_PUBLIC_KEY_COMMAND,
     SM_SC_W2_GET_RANDOM_A,
@@ -487,6 +488,10 @@ typedef enum hci_init_state{
     HCI_INIT_W4_WRITE_CLASS_OF_DEVICE,
     HCI_INIT_WRITE_LOCAL_NAME,
     HCI_INIT_W4_WRITE_LOCAL_NAME,
+    HCI_INIT_WRITE_EIR_DATA,
+    HCI_INIT_W4_WRITE_EIR_DATA,
+    HCI_INIT_WRITE_INQUIRY_MODE,
+    HCI_INIT_W4_WRITE_INQUIRY_MODE,
     HCI_INIT_WRITE_SCAN_ENABLE,
     HCI_INIT_W4_WRITE_SCAN_ENABLE,
     
@@ -569,20 +574,22 @@ typedef struct {
     void (*local_version_information_callback)(uint8_t * local_version_information);
 
     // hardware error callback
-    void (*hardware_error_callback)(void);
+    void (*hardware_error_callback)(uint8_t error);
 
     // basic configuration
     const char *       local_name;
+    const uint8_t *    eir_data;
     uint32_t           class_of_device;
     bd_addr_t          local_bd_addr;
     uint8_t            ssp_enable;
     uint8_t            ssp_io_capability;
     uint8_t            ssp_authentication_requirement;
     uint8_t            ssp_auto_accept;
-    
+    inquiry_mode_t     inquiry_mode;
+
     // single buffer for HCI packet assembly + additional prebuffer for H4 drivers
-    uint8_t   hci_packet_buffer_prefix[HCI_OUTGOING_PRE_BUFFER_SIZE];
-    uint8_t   hci_packet_buffer[HCI_PACKET_BUFFER_SIZE]; // opcode (16), len(8)
+    uint8_t   * hci_packet_buffer;
+    uint8_t   hci_packet_buffer_data[HCI_OUTGOING_PRE_BUFFER_SIZE + HCI_PACKET_BUFFER_SIZE];
     uint8_t   hci_packet_buffer_reserved;
     uint16_t  acl_fragmentation_pos;
     uint16_t  acl_fragmentation_total_size;
@@ -712,7 +719,7 @@ void hci_set_link_key_db(btstack_link_key_db_t const * link_key_db);
 /**
  * @brief Set callback for Bluetooth Hardware Error
  */
-void hci_set_hardware_error_callback(void (*fn)(void));
+void hci_set_hardware_error_callback(void (*fn)(uint8_t error));
 
 /**
  * @brief Set callback for local information from Bluetooth controller right after HCI Reset
@@ -735,6 +742,12 @@ void hci_set_sco_voice_setting(uint16_t voice_setting);
  * @return current voice setting
  */
 uint16_t hci_get_sco_voice_setting(void);
+
+/**
+ * @brief Set inquiry mode: standard, with RSSI, with RSSI + Extended Inquiry Results. Has to be called before power on.
+ * @param inquriy_mode see bluetooth_defines.h
+ */
+void hci_set_inquiry_mode(inquiry_mode_t mode);
 
 /**
  * @brief Requests the change of BTstack power mode.
@@ -900,6 +913,11 @@ uint16_t hci_usable_acl_packet_types(void);
  * Check if ACL packets marked as non flushable can be sent. Called by L2CAP
  */
 int hci_non_flushable_packet_boundary_flag_supported(void);
+
+/**
+ * Check if extended SCO Link is supported
+ */
+int hci_extended_sco_link_supported(void);
 
 /**
  * Check if SSP is supported on both sides. Called by L2CAP

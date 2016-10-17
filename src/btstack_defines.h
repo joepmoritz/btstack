@@ -118,6 +118,7 @@ typedef uint8_t sm_key_t[16];
 
 #define L2CAP_SERVICE_ALREADY_REGISTERED                   0x69
 #define L2CAP_DATA_LEN_EXCEEDS_REMOTE_MTU                  0x6A
+#define L2CAP_SERVICE_DOES_NOT_EXIST                       0x6B
     
 #define RFCOMM_MULTIPLEXER_STOPPED                         0x70
 #define RFCOMM_CHANNEL_ALREADY_REGISTERED                  0x71
@@ -915,10 +916,11 @@ typedef uint8_t sm_key_t[16];
 /** HFP Subevent */
 
 /**
- * @format 11H
+ * @format 11HB1
  * @param subevent_code
  * @param status 0 == OK
  * @param con_handle
+ * @param bd_addr
  */
 #define HFP_SUBEVENT_SERVICE_LEVEL_CONNECTION_ESTABLISHED  0x01
 
@@ -929,10 +931,12 @@ typedef uint8_t sm_key_t[16];
 #define HFP_SUBEVENT_SERVICE_LEVEL_CONNECTION_RELEASED     0x02
 
 /**
- * @format 11H
+ * @format 11HB11
  * @param subevent_code
  * @param status 0 == OK
  * @param handle
+ * @param bd_addr
+ * @param negotiated_codec
  */
 #define HFP_SUBEVENT_AUDIO_CONNECTION_ESTABLISHED          0x03
 
@@ -973,13 +977,6 @@ typedef uint8_t sm_key_t[16];
  * @param error
  */
 #define HFP_SUBEVENT_EXTENDED_AUDIO_GATEWAY_ERROR             0x08
-
-/**
- * @format 11
- * @param subevent_code
- * @param status
- */
-#define HFP_SUBEVENT_CODECS_CONNECTION_COMPLETE               0x09
 
 /**
  * @format 1

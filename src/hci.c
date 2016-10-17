@@ -793,6 +793,11 @@ uint16_t hci_max_acl_data_packet_length(void){
     return hci_stack->acl_data_packet_length;
 }
 
+int hci_extended_sco_link_supported(void){
+    // No. 31, byte 3, bit 7
+    return (hci_stack->local_supported_features[3] & (1 << 7)) != 0;
+}
+
 int hci_non_flushable_packet_boundary_flag_supported(void){
     // No. 54, byte 6, bit 6
     return (hci_stack->local_supported_features[6] & (1 << 6)) != 0;
@@ -1077,6 +1082,14 @@ static void hci_initializing_run(void){
                 hci_send_cmd(&hci_write_local_name, local_name);
             }
             break;
+        case HCI_INIT_WRITE_EIR_DATA:
+            hci_stack->substate = HCI_INIT_W4_WRITE_EIR_DATA;
+            hci_send_cmd(&hci_write_extended_inquiry_response, 0, hci_stack->eir_data);                        
+            break;
+        case HCI_INIT_WRITE_INQUIRY_MODE:
+            hci_stack->substate = HCI_INIT_W4_WRITE_INQUIRY_MODE;
+            hci_send_cmd(&hci_write_inquiry_mode, (int) hci_stack->inquiry_mode);
+            break;
         case HCI_INIT_WRITE_SCAN_ENABLE:
             hci_send_cmd(&hci_write_scan_enable, (hci_stack->connectable << 1) | hci_stack->discoverable); // page scan
             hci_stack->substate = HCI_INIT_W4_WRITE_SCAN_ENABLE;
@@ -1333,6 +1346,11 @@ static void hci_initializing_event_handler(uint8_t * packet, uint16_t size){
             if (hci_stack->local_supported_commands[0] & 0x02) break;
             hci_stack->substate = HCI_INIT_LE_SET_SCAN_PARAMETERS;
             return;
+        case HCI_INIT_W4_WRITE_LOCAL_NAME:
+            // skip write eir data if no eir data set
+            if (hci_stack->eir_data) break;
+            hci_stack->substate = HCI_INIT_WRITE_INQUIRY_MODE;
+            return;
 
 #ifdef ENABLE_SCO_OVER_HCI
         case HCI_INIT_W4_WRITE_SCAN_ENABLE:
@@ -1444,7 +1462,7 @@ static void event_handler(uint8_t *packet, int size){
 
                 // determine usable ACL packet types based on host buffer size and supported features
                 hci_stack->packet_types = hci_acl_packet_types_for_buffer_size_and_local_features(HCI_ACL_PAYLOAD_SIZE, &hci_stack->local_supported_features[0]);
-                log_info("packet types %04x", hci_stack->packet_types); 
+                log_info("Packet types %04x, eSCO %u", hci_stack->packet_types, hci_extended_sco_link_supported()); 
 
                 // Classic/LE
                 log_info("BR/EDR support %u, LE support %u", hci_classic_supported(), hci_le_supported());
@@ -1717,9 +1735,17 @@ static void event_handler(uint8_t *packet, int size){
         case HCI_EVENT_DISCONNECTION_COMPLETE:
             if (packet[2]) break;   // status != 0
             handle = little_endian_read_16(packet, 3);
-            conn = hci_connection_for_handle(handle);
-            if (!conn) break;       // no conn struct anymore
+            // drop outgoing ACL fragments if it is for closed connection
+            if (hci_stack->acl_fragmentation_total_size > 0) {
+                if (handle == READ_ACL_CONNECTION_HANDLE(hci_stack->hci_packet_buffer)){
+                    log_info("hci: drop fragmented ACL data for closed connection");
+                     hci_stack->acl_fragmentation_total_size = 0;
+                     hci_stack->acl_fragmentation_pos = 0;
+                }
+            }
             // re-enable advertisements for le connections if active
+            conn = hci_connection_for_handle(handle);
+            if (!conn) break; 
             if (hci_is_le_connection(conn) && hci_stack->le_advertisements_enabled){
                 hci_stack->le_advertisements_todo |= LE_ADVERTISEMENT_TASKS_ENABLE;
             }
@@ -1727,8 +1753,9 @@ static void event_handler(uint8_t *packet, int size){
             break;
 
         case HCI_EVENT_HARDWARE_ERROR:
+            log_error("Hardware Error: 0x%02x", packet[2]);
             if (hci_stack->hardware_error_callback){
-                (*hci_stack->hardware_error_callback)();
+                (*hci_stack->hardware_error_callback)(packet[2]);
             } else {
                 // if no special requests, just reboot stack
                 hci_power_control_off();
@@ -1975,6 +2002,9 @@ void hci_init(const hci_transport_t *transport, const void *config){
     // reference to used config
     hci_stack->config = config;
     
+    // setup pointer for outgoing packet buffer
+    hci_stack->hci_packet_buffer = &hci_stack->hci_packet_buffer_data[HCI_OUTGOING_PRE_BUFFER_SIZE];
+
     // max acl payload size defined in config.h
     hci_stack->acl_data_packet_length = HCI_ACL_PAYLOAD_SIZE;
     
@@ -2350,16 +2380,18 @@ static void hci_run(void){
     // send continuation fragments first, as they block the prepared packet buffer
     if (hci_stack->acl_fragmentation_total_size > 0) {
         hci_con_handle_t con_handle = READ_ACL_CONNECTION_HANDLE(hci_stack->hci_packet_buffer);
-        if (hci_can_send_prepared_acl_packet_now(con_handle)){
-            hci_connection_t *connection = hci_connection_for_handle(con_handle);
-            if (connection) {
+        hci_connection_t *connection = hci_connection_for_handle(con_handle);
+        if (connection) {
+            if (hci_can_send_prepared_acl_packet_now(con_handle)){
                 hci_send_acl_packet_fragments(connection);
                 return;
-            } 
+            }
+        } else {
             // connection gone -> discard further fragments
+            log_info("hci_run: fragmented ACL packet no connection -> discard fragment");
             hci_stack->acl_fragmentation_total_size = 0;
             hci_stack->acl_fragmentation_pos = 0;
-        }        
+        }
     }
 
     if (!hci_can_send_command_packet_now()) return;
@@ -2554,25 +2586,7 @@ static void hci_run(void){
                 connection->role  = HCI_ROLE_SLAVE;
                 if (connection->address_type == BD_ADDR_TYPE_CLASSIC){
                     hci_send_cmd(&hci_accept_connection_request, connection->address, 1);
-                } else {
-                    // remote supported feature eSCO is set if link type is eSCO
-                    uint16_t max_latency;
-                    uint8_t  retransmission_effort;
-                    uint16_t packet_types;
-                    // remote supported feature eSCO is set if link type is eSCO
-                    if (connection->remote_supported_feature_eSCO){
-                        // eSCO: S4 - max latency == transmission interval = 0x000c == 12 ms, 
-                        max_latency = 0x000c;
-                        retransmission_effort = 0x02;
-                        packet_types = 0x388;
-                    } else {
-                        // SCO: max latency, retransmission interval: N/A. any packet type
-                        max_latency = 0xffff;
-                        retransmission_effort = 0xff;
-                        packet_types = 0x003f;
-                    }
-                    hci_send_cmd(&hci_accept_synchronous_connection, connection->address, 8000, 8000, max_latency, hci_stack->sco_voice_setting, retransmission_effort, packet_types);
-                }
+                } 
                 return;
 
 #ifdef ENABLE_BLE
@@ -3585,6 +3599,23 @@ void gap_auto_connection_stop_all(void){
 
 #endif
 
+/**
+ * @brief Set Extended Inquiry Response data
+ * @param eir_data size 240 bytes, is not copied make sure memory is accessible during stack startup
+ * @note has to be done before stack starts up
+ */
+void gap_set_extended_inquiry_response(const uint8_t * data){
+    hci_stack->eir_data = data;
+}
+
+/**
+ * @brief Set inquiry mode: standard, with RSSI, with RSSI + Extended Inquiry Results. Has to be called before power on.
+ * @param inquriy_mode see bluetooth_defines.h
+ */
+void hci_set_inquiry_mode(inquiry_mode_t mode){
+    hci_stack->inquiry_mode = mode;
+}
+
 /** 
  * @brief Configure Voice Setting for use with SCO data in HSP/HFP
  */
@@ -3613,7 +3644,7 @@ int hci_get_sco_packet_length(void){
 /**
  * @brief Set callback for Bluetooth Hardware Error
  */
-void hci_set_hardware_error_callback(void (*fn)(void)){
+void hci_set_hardware_error_callback(void (*fn)(uint8_t error)){
     hci_stack->hardware_error_callback = fn;
 }
 

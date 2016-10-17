@@ -186,8 +186,12 @@ static void rfcomm_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t
 
 
 // MARK: globals
-static const hci_transport_t * transport;
+
+#ifdef HAVE_TRANSPORT_H4
 static hci_transport_config_uart_t hci_transport_config_uart;
+#endif
+
+static const hci_transport_t * transport;
 static btstack_timer_source_t timeout;
 static uint8_t timeout_active = 0;
 static int power_management_sleep = 0;
@@ -1012,7 +1016,7 @@ static int btstack_command_handler(connection_t *connection, uint8_t *packet, ui
         case L2CAP_DECLINE_CONNECTION:
             cid    = little_endian_read_16(packet, 3);
             reason = packet[7];
-            l2cap_decline_connection(cid, reason);
+            l2cap_decline_connection(cid);
             break;
         case RFCOMM_CREATE_CHANNEL:
             reverse_bd_addr(&packet[3], addr);

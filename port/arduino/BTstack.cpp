@@ -24,18 +24,18 @@
 #include "btstack_run_loop_embedded.h"
 #include "classic/sdp_util.h"
 
+#include "ad_parser.h"
 #include "btstack_chipset_em9301.h"
+#include "btstack_debug.h"
 #include "gap.h"
 #include "hci.h"
 #include "hci_dump.h"
 #include "l2cap.h"
-#include "ble/ad_parser.h"
 #include "ble/att_db.h"
 #include "ble/att_server.h"
-#include "att_db_util.h"
+#include "ble/att_db_util.h"
 #include "ble/le_device_db.h"
 #include "ble/sm.h"
-#include "btstack_debug.h"
 
 // Pin 13 has an LED connected on most Arduino boards.
 #define PIN_LED 13
@@ -721,8 +721,8 @@ void BTstackManager::setPublicBdAddr(bd_addr_t addr){
     memcpy(public_bd_addr, addr ,6);
 }
 
-void bluetooth_hardware_error(){
-    printf("Bluetooth Hardware Error event. Restarting...\n\n\n");
+void bluetooth_hardware_error(uint8_t error){
+    printf("Bluetooth Hardware Error event 0x%02x. Restarting...\n\n\n", error);
 #ifdef __AVR__
     wdt_enable(WDTO_15MS);
     // wait for watchdog to trigger
