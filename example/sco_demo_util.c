@@ -62,7 +62,7 @@
 #define SCO_REPORT_PERIOD 100
 
 #ifdef HAVE_POSIX_FILE_IO
-#define SCO_WAV_FILENAME      "sco_input.wav"
+#define SCO_WAV_FILENAME      "/data/data/com.yourincal.btstackaudiotest/sco_input.wav"
 #define SCO_MSBC_OUT_FILENAME "sco_output.msbc"
 #define SCO_MSBC_IN_FILENAME  "sco_input.mscb"
 
@@ -192,6 +192,7 @@ void sco_demo_close(void){
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_SINE
 #if defined(SCO_WAV_FILENAME) || defined(SCO_SBC_FILENAME)
     wav_writer_close();
+    log_info("Wav file closed");
     printf("SCO demo statistics: ");
     if (negotiated_codec == HFP_CODEC_MSBC){
         printf("Used mSBC with PLC, number of processed frames: \n - %d good frames, \n - %d zero frames, \n - %d bad frames.", decoder_state.good_frames_nr, decoder_state.zero_frames_nr, decoder_state.bad_frames_nr);
