@@ -333,16 +333,17 @@ static void sco_demo_init_CVSD(void){
 #endif  
 }
 
+
+int8_t audio_frame_out[24];
 static void sco_demo_receive_CVSD(uint8_t * packet, uint16_t size){
     if (!num_samples_to_write) return;
 
     const int num_samples = size - 3;
     const int samples_to_write = btstack_min(num_samples, num_samples_to_write);
-    int8_t audio_frame_out[24];
     
 
-    // memcpy(audio_frame_out, (int8_t*)(packet+3), 24);
-    btstack_cvsd_plc_process_data(&cvsd_plc_state, (int8_t *)(packet+3), num_samples, audio_frame_out);
+    memcpy(audio_frame_out, (int8_t*)(packet+3), 24);
+    // btstack_cvsd_plc_process_data(&cvsd_plc_state, (int8_t *)(packet+3), num_samples, audio_frame_out);
 
     wav_writer_write_int8(samples_to_write, audio_frame_out);
     num_samples_to_write -= samples_to_write;
@@ -477,7 +478,7 @@ void sco_demo_send(hci_con_handle_t sco_handle){
     little_endian_store_16(sco_packet, 0, sco_handle);
     // set len
     sco_packet[2] = sco_payload_length;
-    const int audio_samples_per_packet = sco_payload_length;    // for 8-bit data. for 16-bit data it's /2
+    // const int audio_samples_per_packet = sco_payload_length;    // for 8-bit data. for 16-bit data it's /2
 
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_SINE
     if (negotiated_codec == HFP_CODEC_MSBC){
@@ -493,7 +494,8 @@ void sco_demo_send(hci_con_handle_t sco_handle){
 
         sco_demo_fill_audio_frame();
     } else {
-        sco_demo_sine_wave_int8(audio_samples_per_packet, (int8_t *) (sco_packet+3));
+        // sco_demo_sine_wave_int8(audio_samples_per_packet, (int8_t *) (sco_packet+3));
+        memcpy((int8_t*)(sco_packet+3), audio_frame_out, 24);
     }
 #else
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_ASCII
