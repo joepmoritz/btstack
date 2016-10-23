@@ -55,7 +55,6 @@
 #include "btstack_memory.h"
 #include "btstack_run_loop.h"
 #include "btstack_run_loop_posix.h"
-#include "hal_led.h"
 #include "hci.h"
 #include "hci_dump.h"
 #include "stdin_support.h"
@@ -73,10 +72,10 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
 
 static void sigint_handler(int param){
 
-#ifndef _WIN32
-    // reset anyway
-    btstack_stdin_reset();
-#endif
+// #ifndef _WIN32
+//     // reset anyway
+//     btstack_stdin_reset();
+// #endif
 
     log_info(" <= SIGINT received, shutting down..\n");   
     hci_power_control(HCI_POWER_OFF);
@@ -125,7 +124,7 @@ int main(int argc, const char * argv[]){
     // use logger: format HCI_DUMP_PACKETLOGGER, HCI_DUMP_BLUEZ or HCI_DUMP_STDOUT
 
     char pklg_path[100];
-    strcpy(pklg_path, "/tmp/hci_dump");
+    strcpy(pklg_path, "/data/data/com.yourincal.btstackaudiotest/hci_dump");
     if (usb_path_len){
         strcat(pklg_path, "_");
         strcat(pklg_path, argv[2]);

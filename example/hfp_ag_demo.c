@@ -733,7 +733,7 @@ int btstack_main(int argc, const char * argv[]){
     printf("SDP service record size: %u\n", de_get_len( hfp_service_buffer));
     sdp_register_service(hfp_service_buffer);
     
-#ifdef HAVE_POSIX_STDIN
+#ifdef HAVE_POSIX_STDIN_NOPE
     btstack_stdin_setup(stdin_process);
 #endif  
     // turn on!
