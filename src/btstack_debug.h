@@ -112,4 +112,7 @@ void log_info_key(const char * name, sm_key_t key);
  */
 void log_info_hexdump(const void *data, int size);
 
+#define printf log_info
+
+
 #endif // __DEBUG_H

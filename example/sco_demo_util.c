@@ -350,7 +350,7 @@ void sco_demo_send(hci_con_handle_t sco_handle){
  */
 void sco_demo_receive(uint8_t * packet, uint16_t size){
 
-    dump_data = 1;
+    dump_data = 0;
 
     count_received++;
     // if ((count_received % SCO_REPORT_PERIOD) == 0) sco_report();

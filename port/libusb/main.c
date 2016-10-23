@@ -130,7 +130,7 @@ int main(int argc, const char * argv[]){
         strcat(pklg_path, argv[2]);
     }
     strcat(pklg_path, ".pklg");
-    printf("Packet Log: %s\n", pklg_path);
+    log_info("Packet Log: %s\n", pklg_path);
     hci_dump_open(pklg_path, HCI_DUMP_PACKETLOGGER);
 
     // init HCI
