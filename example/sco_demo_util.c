@@ -80,7 +80,7 @@
 #define NUM_CHANNELS 1
 #define SAMPLE_RATE 8000
 #define FRAMES_PER_BUFFER 24
-#define PA_SAMPLE_TYPE paInt8
+#define PA_SAMPLE_TYPE paInt16
 // portaudio globals
 static  PaStream * stream;
 #endif
@@ -168,16 +168,18 @@ static void sco_demo_init_CVSD(void){
 }
 
 
-int8_t audio_frame_out[24];
+int16_t audio_frame_out[48];
+int16_t audio_frame_out_new[48];
 static void sco_demo_receive_CVSD(uint8_t * packet, uint16_t size){
-    if (num_samples_to_write){
-        const int num_samples = size - 3;
-        const int samples_to_write = btstack_min(num_samples, num_samples_to_write);
-        
-        memcpy(audio_frame_out, (int8_t*)(packet+3), 24);
-        // btstack_cvsd_plc_process_data(&cvsd_plc_state, (int8_t *)(packet+3), num_samples, audio_frame_out);
+    const int num_samples = size - 3;
+    const int samples_to_write = btstack_min(num_samples, num_samples_to_write);
 
-        wav_writer_write_int8(samples_to_write, audio_frame_out);
+    memcpy(audio_frame_out_new, (int16_t*)(packet+3), 2 * num_samples);
+
+    if (num_samples_to_write){
+        // btstack_cvsd_plc_process_data(&cvsd_plc_state, (int8_t *)(packet+3), num_samples, audio_frame_out_new);
+
+        wav_writer_write_int16(samples_to_write, audio_frame_out_new);
         num_samples_to_write -= samples_to_write;
         if (num_samples_to_write == 0){
             sco_demo_close();
@@ -281,6 +283,8 @@ void sco_demo_init(void){
     if( err != paNoError ) return;
 #endif	
 
+    hci_set_sco_voice_setting(0x60);    // linear, unsigned, 8-bit, transparent
+
 #if SCO_DEMO_MODE != SCO_DEMO_MODE_SINE
     hci_set_sco_voice_setting(0x03);    // linear, unsigned, 8-bit, transparent
 #endif
@@ -298,7 +302,7 @@ void sco_demo_send(hci_con_handle_t sco_handle){
 
     if (!sco_handle) return;
     
-    const int sco_packet_length = 24 + 3; // hci_get_sco_packet_length();
+    const int sco_packet_length = hci_get_sco_packet_length();
     const int sco_payload_length = sco_packet_length - 3;
 
     hci_reserve_packet_buffer();
@@ -307,7 +311,7 @@ void sco_demo_send(hci_con_handle_t sco_handle){
     little_endian_store_16(sco_packet, 0, sco_handle);
     // set len
     sco_packet[2] = sco_payload_length;
-    // const int audio_samples_per_packet = sco_payload_length;    // for 8-bit data. for 16-bit data it's /2
+    const int audio_samples_per_packet = sco_payload_length / 2;    // for 8-bit data. for 16-bit data it's /2
 
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_SINE
     if (negotiated_codec == HFP_CODEC_MSBC){
@@ -324,7 +328,19 @@ void sco_demo_send(hci_con_handle_t sco_handle){
         sco_demo_fill_audio_frame();
     } else {
         // wav_synthesize_sine_wave_int8(audio_samples_per_packet, (int8_t *) (sco_packet+3));
-        memcpy((int8_t*)(sco_packet+3), audio_frame_out, 24);
+        audio_frame_out[6] = (int16_t)((audio_frame_out[5] + audio_frame_out[7]) / 2);
+        audio_frame_out[14] = (int16_t)((audio_frame_out[13] + audio_frame_out[15]) / 2);
+        audio_frame_out[23] = (int16_t)((audio_frame_out[22] + audio_frame_out_new[0]) / 2);
+        memcpy((int16_t*)(sco_packet+3), audio_frame_out, sco_payload_length);
+
+        log_error("Just before sending:");
+        for (int i = 0; i < audio_samples_per_packet; i++)
+        {
+            log_error("%02d)  %d", i, audio_frame_out[i]);
+            // if (abs(audio_frame_out_new[i]) < 512) audio_frame_out_new[i] = 0;
+        }
+
+        memcpy(audio_frame_out, audio_frame_out_new, 48);
 
     }
 #else
@@ -359,6 +375,7 @@ void sco_demo_receive(uint8_t * packet, uint16_t size){
     // if ((count_received % SCO_REPORT_PERIOD) == 0) sco_report();
 
 
+
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_SINE
 #ifdef SCO_WAV_FILENAME
     if (negotiated_codec == HFP_CODEC_MSBC){
@@ -368,6 +385,19 @@ void sco_demo_receive(uint8_t * packet, uint16_t size){
     }
 #endif
 #endif
+
+
+    int audio_size = size;
+    audio_size = (audio_size - 3) / 2;
+
+    log_error("Just from btstack:");
+    for (int i = 0; i < audio_size; i++)
+    {
+        log_error("%02d)  %d", i, audio_frame_out_new[i]);
+        // if (abs(audio_frame_out_new[i]) < 512) audio_frame_out_new[i] = 0;
+    }
+
+
 
     if (packet[1] & 0x30){
         printf("SCO CRC Error: %x - data: ", (packet[1] & 0x30) >> 4);

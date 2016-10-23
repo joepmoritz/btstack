@@ -90,7 +90,7 @@
 // One complete SCO packet with 24 frames every 3 frames (== 3 ms)
 #define NUM_ISO_PACKETS (3)
 // results in 9 bytes per frame
-#define ISO_PACKET_SIZE (9)
+#define ISO_PACKET_SIZE (17)
 
 // 49 bytes is the max usb packet size for alternate setting 5 (Three 8 kHz 16-bit channels or one 8 kHz 16-bit channel and one 16 kHz 16-bit channel)
 // note: alt setting 6 has max packet size of 63 every 7.5 ms = 472.5 bytes / HCI packet, while max SCO packet has 255 byte payload
@@ -381,6 +381,20 @@ static void handle_completed_transfer(struct libusb_transfer *transfer){
             uint8_t * data = libusb_get_iso_packet_buffer_simple(transfer, i);
             // log_info_hexdump(transfer->buffer, 24);
             // log_info("handle_isochronous_data,size %u/%u", pack->length, pack->actual_length);
+
+            // /////////////////////////////////////////////////////////////////////////////
+            // // Log audio 16-bit -- JM
+            // int16_t* audio_data = (int16_t*)(data + 3);
+            // int audio_size = pack->actual_length;
+            // audio_size = (audio_size - 3) / 2;
+
+            // log_error("Just from libusb:");
+            // for (int i = 0; i < audio_size; i++)
+            // {
+            //     log_error("%02d)  %d", i, audio_data[i]);
+            // }
+            // /////////////////////////////////////////////////////////////////////////////
+
             handle_isochronous_data(data, pack->actual_length);
         }
         resubmit = 1;
