@@ -391,7 +391,7 @@ static void handle_completed_transfer(struct libusb_transfer *transfer){
         signal_done = 1;
 #ifdef ENABLE_SCO_OVER_HCI
     } else if (transfer->endpoint == sco_in_addr) {
-        // log_info("handle_completed_transfer for SCO IN! num packets %u", transfer->NUM_ISO_PACKETS);
+        // log_info("handle_completed_transfer for SCO IN! num packets %u", transfer->num_iso_packets);
         int i;
         for (i = 0; i < transfer->num_iso_packets; i++) {
             struct libusb_iso_packet_descriptor *pack = &transfer->iso_packet_desc[i];
@@ -401,16 +401,16 @@ static void handle_completed_transfer(struct libusb_transfer *transfer){
             }
             if (!pack->actual_length) continue;
             uint8_t * data = libusb_get_iso_packet_buffer_simple(transfer, i);
-            // printf_hexdump(data, pack->actual_length);
+            // log_info_hexdump(transfer->buffer, 24);
             // log_info("handle_isochronous_data,size %u/%u", pack->length, pack->actual_length);
             handle_isochronous_data(data, pack->actual_length);
         }
         resubmit = 1;
     } else if (transfer->endpoint == sco_out_addr){
-        log_info("sco out done, {{ %u/%u (%x)}, { %u/%u (%x)}, { %u/%u (%x)}}", 
-            transfer->iso_packet_desc[0].actual_length, transfer->iso_packet_desc[0].length, transfer->iso_packet_desc[0].status,
-            transfer->iso_packet_desc[1].actual_length, transfer->iso_packet_desc[1].length, transfer->iso_packet_desc[1].status,
-            transfer->iso_packet_desc[2].actual_length, transfer->iso_packet_desc[2].length, transfer->iso_packet_desc[2].status);
+        // log_info("sco out done, {{ %u/%u (%x)}, { %u/%u (%x)}, { %u/%u (%x)}}", 
+        //     transfer->iso_packet_desc[0].actual_length, transfer->iso_packet_desc[0].length, transfer->iso_packet_desc[0].status,
+        //     transfer->iso_packet_desc[1].actual_length, transfer->iso_packet_desc[1].length, transfer->iso_packet_desc[1].status,
+        //     transfer->iso_packet_desc[2].actual_length, transfer->iso_packet_desc[2].length, transfer->iso_packet_desc[2].status);
         // notify upper layer if there's space for new SCO packets
         if (sco_ring_have_space()) {
             uint8_t event[] = { HCI_EVENT_SCO_CAN_SEND_NOW, 0};
@@ -745,7 +745,7 @@ static int usb_open(void){
     libusb_state = LIB_USB_OPENED;
 
     // configure debug level
-    libusb_set_debug(NULL, LIBUSB_LOG_LEVEL_WARNING);
+    libusb_set_debug(NULL, LIBUSB_LOG_LEVEL_INFO);
     
 #ifdef HAVE_USB_VENDOR_ID_AND_PRODUCT_ID
 
