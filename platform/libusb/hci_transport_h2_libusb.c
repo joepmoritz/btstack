@@ -520,6 +520,7 @@ static int is_known_bt_device(uint16_t vendor_id, uint16_t product_id){
 }
 
 static void scan_for_bt_endpoints(void) {
+    log_info("scan_for_bt_endpoints");
     int r;
 
     event_in_addr = 0;
