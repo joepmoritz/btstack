@@ -168,11 +168,16 @@ static void sco_demo_init_CVSD(void){
 }
 
 
-int16_t audio_frame_out[48];
-int16_t audio_frame_out_new[48];
+int16_t audio_frame_out[24];
+int16_t audio_frame_out_new[24];
 static void sco_demo_receive_CVSD(uint8_t * packet, uint16_t size){
-    const int num_samples = size - 3;
+    const int num_samples = (size - 3) / 2;
     const int samples_to_write = btstack_min(num_samples, num_samples_to_write);
+
+    // for (int i = 0; i < num_samples; ++i)
+    // {
+    //     audio_frame_out_new[i] = little_endian_read_16(packet+3, 3 + 2 * i);
+    // }
 
     memcpy(audio_frame_out_new, (int16_t*)(packet+3), 2 * num_samples);
 
@@ -328,15 +333,23 @@ void sco_demo_send(hci_con_handle_t sco_handle){
         sco_demo_fill_audio_frame();
     } else {
         // wav_synthesize_sine_wave_int8(audio_samples_per_packet, (int8_t *) (sco_packet+3));
-        audio_frame_out[6] = (int16_t)((audio_frame_out[5] + audio_frame_out[7]) / 2);
-        audio_frame_out[14] = (int16_t)((audio_frame_out[13] + audio_frame_out[15]) / 2);
-        audio_frame_out[23] = (int16_t)((audio_frame_out[22] + audio_frame_out_new[0]) / 2);
+        
+
+        // audio_frame_out[6] = (int16_t)((audio_frame_out[5] + audio_frame_out[7]) / 2);
+        // audio_frame_out[14] = (int16_t)((audio_frame_out[13] + audio_frame_out[15]) / 2);
+        // audio_frame_out[23] = (int16_t)((audio_frame_out[22] + audio_frame_out_new[0]) / 2);
         memcpy((int16_t*)(sco_packet+3), audio_frame_out, sco_payload_length);
 
-        log_error("Just before sending:");
+        // log_error("Just before sending:");
+        static int shown = 0;
         for (int i = 0; i < audio_samples_per_packet; i++)
         {
-            log_error("%02d)  %d", i, audio_frame_out[i]);
+            if (shown < 1000)
+            {
+                shown++;
+                log_error("%02d)  %d", i, audio_frame_out_new[i]);
+            }
+
             // if (abs(audio_frame_out_new[i]) < 512) audio_frame_out_new[i] = 0;
         }
 
@@ -390,10 +403,10 @@ void sco_demo_receive(uint8_t * packet, uint16_t size){
     int audio_size = size;
     audio_size = (audio_size - 3) / 2;
 
-    log_error("Just from btstack:");
+    // log_error("Just from btstack:");
     for (int i = 0; i < audio_size; i++)
     {
-        log_error("%02d)  %d", i, audio_frame_out_new[i]);
+        // log_error("%02d)  %d", i, audio_frame_out_new[i]);
         // if (abs(audio_frame_out_new[i]) < 512) audio_frame_out_new[i] = 0;
     }
 
