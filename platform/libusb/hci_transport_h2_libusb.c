@@ -94,7 +94,7 @@
 
 // 49 bytes is the max usb packet size for alternate setting 5 (Three 8 kHz 16-bit channels or one 8 kHz 16-bit channel and one 16 kHz 16-bit channel)
 // note: alt setting 6 has max packet size of 63 every 7.5 ms = 472.5 bytes / HCI packet, while max SCO packet has 255 byte payload
-#define SCO_PACKET_SIZE  (49)
+#define SCO_PACKET_SIZE  (255)
 
 // Outgoing SCO packet queue
 // simplified ring buffer implementation

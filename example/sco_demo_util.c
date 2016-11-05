@@ -342,6 +342,11 @@ static void sco_demo_receive_CVSD(uint8_t * packet, uint16_t size){
     const int samples_to_write = btstack_min(num_samples, num_samples_to_write);
     
 
+    // for (int i = 0; i < num_samples; ++i)
+    // {
+    //     audio_frame_out_new[i] = little_endian_read_16(packet+3, 3 + 2 * i);
+    // }
+
     memcpy(audio_frame_out_new, (int16_t*)(packet+3), 2 * num_samples);
     // btstack_cvsd_plc_process_data(&cvsd_plc_state, (int8_t *)(packet+3), num_samples, audio_frame_out);
 
@@ -500,6 +505,28 @@ void sco_demo_send(hci_con_handle_t sco_handle){
     } else {
         memset((int8_t *) (sco_packet+3), 0, audio_samples_per_packet);
         // wav_synthesize_sine_wave_int8(audio_samples_per_packet, (int8_t *) (sco_packet+3));
+        
+
+        // audio_frame_out[6] = (int16_t)((audio_frame_out[5] + audio_frame_out[7]) / 2);
+        // audio_frame_out[14] = (int16_t)((audio_frame_out[13] + audio_frame_out[15]) / 2);
+        // audio_frame_out[23] = (int16_t)((audio_frame_out[22] + audio_frame_out_new[0]) / 2);
+        memcpy((int16_t*)(sco_packet+3), audio_frame_out, sco_payload_length);
+
+        // log_error("Just before sending:");
+        static int shown = 0;
+        for (int i = 0; i < audio_samples_per_packet; i++)
+        {
+            if (shown < 1000)
+            {
+                shown++;
+                log_error("%02d)  %d", i, audio_frame_out_new[i]);
+            }
+
+            // if (abs(audio_frame_out_new[i]) < 512) audio_frame_out_new[i] = 0;
+        }
+
+        memcpy(audio_frame_out, audio_frame_out_new, 48);
+
     }
 #else
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_ASCII
@@ -549,10 +576,10 @@ void sco_demo_receive(uint8_t * packet, uint16_t size){
     int audio_size = size;
     audio_size = (audio_size - 3) / 2;
 
-    log_error("Just from btstack:");
+    // log_error("Just from btstack:");
     for (int i = 0; i < audio_size; i++)
     {
-        log_error("%02d)  %d", i, audio_frame_out_new[i]);
+        // log_error("%02d)  %d", i, audio_frame_out_new[i]);
         // if (abs(audio_frame_out_new[i]) < 512) audio_frame_out_new[i] = 0;
     }
 
@@ -565,23 +592,6 @@ void sco_demo_receive(uint8_t * packet, uint16_t size){
 
         return;
     }
-<<<<<<< HEAD
-=======
-
-#if SCO_DEMO_MODE == SCO_DEMO_MODE_SINE
-#ifdef USE_PORTAUDIO
-    uint32_t start = btstack_run_loop_get_time_ms();
-    Pa_WriteStream( stream, &packet[3], size -3);
-    uint32_t end   = btstack_run_loop_get_time_ms();
-    if (end - start > 5){
-        printf("Portaudio: write stream took %u ms\n", end - start);
-    }
-    dump_data = 0;
-#endif
-#endif
-
-    dump_data = 1;
->>>>>>> Disabled port audio, output silent now, incoming data dumped.
     if (dump_data){
         printf("data: ");
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_ASCII
