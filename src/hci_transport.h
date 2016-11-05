@@ -154,6 +154,10 @@ const hci_transport_t * hci_transport_usb_instance(void);
  */
 void hci_transport_usb_set_path(int len, uint8_t * port_numbers);
 
+void hci_transport_usb_set_fd(int fd);
+void hci_transport_usb_set_device_path(const char* path);
+
+
 /* API_END */
     
 #if defined __cplusplus
