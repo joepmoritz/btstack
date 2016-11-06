@@ -88,9 +88,9 @@
 
 // for ALT_SETTING >= 1 and 8-bit channel, we need the following isochronous packets
 // One complete SCO packet with 24 frames every 3 frames (== 3 ms)
-#define NUM_ISO_PACKETS (3)
+#define NUM_ISO_PACKETS (16)
 // results in 9 bytes per frame
-#define ISO_PACKET_SIZE (17)
+#define ISO_PACKET_SIZE (256)
 
 // 49 bytes is the max usb packet size for alternate setting 5 (Three 8 kHz 16-bit channels or one 8 kHz 16-bit channel and one 16 kHz 16-bit channel)
 // note: alt setting 6 has max packet size of 63 every 7.5 ms = 472.5 bytes / HCI packet, while max SCO packet has 255 byte payload
@@ -567,7 +567,7 @@ static void scan_for_bt_endpoints(void) {
         const struct libusb_endpoint_descriptor *endpoint = interface_descriptor->endpoint;
 
         for (r=0;r<interface_descriptor->bNumEndpoints;r++,endpoint++){
-            log_info("- endpoint %x, attributes %x", endpoint->bEndpointAddress, endpoint->bmAttributes);
+            log_info("- endpoint %x, attributes %x, max packet size %d", endpoint->bEndpointAddress, endpoint->bmAttributes, endpoint->wMaxPacketSize);
 
             switch (endpoint->bmAttributes & 0x3){
                 case LIBUSB_TRANSFER_TYPE_INTERRUPT:
@@ -588,11 +588,11 @@ static void scan_for_bt_endpoints(void) {
                     break;
                 case LIBUSB_TRANSFER_TYPE_ISOCHRONOUS:
                     if (endpoint->bEndpointAddress & 0x80) {
-                        if (sco_in_addr) continue;
+                        if (sco_in_addr || endpoint->wMaxPacketSize == 0) continue;
                         sco_in_addr = endpoint->bEndpointAddress;
                         log_info("-> using 0x%2.2X for SCO Data In", sco_in_addr);
                     } else {
-                        if (sco_out_addr) continue;
+                        if (sco_out_addr || endpoint->wMaxPacketSize == 0) continue;
                         sco_out_addr = endpoint->bEndpointAddress;
                         log_info("-> using 0x%2.2X for SCO Data Out", sco_out_addr);
                     }
@@ -679,17 +679,17 @@ static int prepare_device(libusb_device_handle * aHandle){
     log_info("libusb_detach_kernel_driver");
 #endif
 
-    const int configuration = 1;
-    log_info("setting configuration %d...", configuration);
-    r = libusb_set_configuration(aHandle, configuration);
-    if (r < 0) {
-        log_error("Error libusb_set_configuration: %d", r);
-        if (kernel_driver_detached){
-            libusb_attach_kernel_driver(aHandle, 0);
-        }
-        libusb_close(aHandle);
-        return r;
-    }
+    // const int configuration = 1;
+    // log_info("setting configuration %d...", configuration);
+    // r = libusb_set_configuration(aHandle, configuration);
+    // if (r < 0) {
+    //     log_error("Error libusb_set_configuration: %d", r);
+    //     if (kernel_driver_detached){
+    //         libusb_attach_kernel_driver(aHandle, 0);
+    //     }
+    //     libusb_close(aHandle);
+    //     return r;
+    // }
 
     // reserve access to device
     log_info("claiming interface 0...");
@@ -803,13 +803,14 @@ static int usb_open(void){
     if (usb_fd && usb_device_path)
     {
         log_info("Getting device for path %s", usb_device_path);
-        libusb_device* device = libusb_get_device2(NULL, usb_device_path);
-        if (!device) {
+        dev = libusb_get_device2(NULL, usb_device_path);
+        if (!dev) {
             log_error("Cannot open usb device path %s", usb_device_path);
             return -1;
         }
+        log_error("device %p", dev);
 
-        int r = libusb_open2(device, &handle, usb_fd);
+        int r = libusb_open2(dev, &handle, usb_fd);
         if (!handle || r < 0) {
             log_error("Cannot open FD %d for usb path %s", usb_fd, usb_device_path);
             return -1;
@@ -818,6 +819,12 @@ static int usb_open(void){
         log_info("libusb_open2 %d, handle %p", r, handle);
 
         libusb_reset_device(handle);
+
+        r = prepare_device(handle);
+        if (r < 0) {
+            log_error("Failed to prepare device %d", r);
+            return r;
+        }
     }
     else
     {
