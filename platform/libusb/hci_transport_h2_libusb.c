@@ -703,16 +703,33 @@ static int prepare_device(libusb_device_handle * aHandle){
 #endif
 
     const int configuration = 1;
-    log_info("setting configuration %d...", configuration);
-    r = libusb_set_configuration(aHandle, configuration);
+    int current_configuration = -1;
+    r = libusb_get_configuration(aHandle, &current_configuration);
     if (r < 0) {
-        log_error("Error libusb_set_configuration: %d", r);
+        log_error("Error libusb_get_configuration: %d", r);
         if (kernel_driver_detached){
             libusb_attach_kernel_driver(aHandle, 0);
         }
         libusb_close(aHandle);
         return r;
     }
+
+    log_error("have config %d", current_configuration);
+    if (current_configuration != configuration)
+    {
+        log_error("setting config %d", configuration);
+        log_info("setting configuration %d...", configuration);
+        r = libusb_set_configuration(aHandle, configuration);
+        if (r < 0) {
+            log_error("Error libusb_set_configuration: %d", r);
+            if (kernel_driver_detached){
+                libusb_attach_kernel_driver(aHandle, 0);
+            }
+            libusb_close(aHandle);
+            return r;
+        }
+    }
+
 
     // reserve access to device
     log_info("claiming interface 0...");
@@ -764,7 +781,7 @@ static libusb_device_handle * try_open_device(libusb_device * device){
     log_info("libusb open %d, handle %p", r, dev_handle);
 
     // reset device
-    libusb_reset_device(dev_handle);
+    r = libusb_reset_device(dev_handle);
     if (r < 0) {
         log_error("libusb_reset_device failed!");
         libusb_close(dev_handle);
