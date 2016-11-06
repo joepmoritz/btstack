@@ -567,7 +567,7 @@ static void scan_for_bt_endpoints(void) {
         const struct libusb_endpoint_descriptor *endpoint = interface_descriptor->endpoint;
 
         for (r=0;r<interface_descriptor->bNumEndpoints;r++,endpoint++){
-            log_info("- endpoint %x, attributes %x, max packet size %d", endpoint->bEndpointAddress, endpoint->bmAttributes, endpoint->wMaxPacketSize);
+            log_error("- endpoint %x, attributes %x max packet size: %d", endpoint->bEndpointAddress, endpoint->bmAttributes, endpoint->wMaxPacketSize);
 
             switch (endpoint->bmAttributes & 0x3){
                 case LIBUSB_TRANSFER_TYPE_INTERRUPT:
