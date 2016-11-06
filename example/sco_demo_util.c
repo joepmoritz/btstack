@@ -512,17 +512,71 @@ void sco_demo_send(hci_con_handle_t sco_handle){
         // audio_frame_out[23] = (int16_t)((audio_frame_out[22] + audio_frame_out_new[0]) / 2);
         memcpy((int16_t*)(sco_packet+3), audio_frame_out, sco_payload_length);
 
-        // log_error("Just before sending:");
+        static const int gate_open_threshold = 5000;
+        static const int gate_close_threshold = 3000;
+        static const int close_frame_count_threshold = 8000; // 1 sec
+
+        static int gate_open = 1;
+        static int frames_since_last_above_close = 0;
+
+        // log_error("huh?");
+
+        {
+            int i = 0;
+            int16_t* a = audio_frame_out_new;
+            log_error("%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+                frames_since_last_above_close,
+                a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], 
+                a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++]);
+        }
+
+        int closing = 0;
+        int opening = 0;
+        for (int i = 0; i < audio_samples_per_packet; i++)
+        {
+            if (abs(audio_frame_out_new[i]) < gate_close_threshold)
+            {
+                frames_since_last_above_close++;
+            }
+            else
+            {
+                frames_since_last_above_close = 0;
+            }
+
+            if (abs(audio_frame_out_new[i]) > gate_open_threshold) opening = 1;
+        }
+
+        if (frames_since_last_above_close > close_frame_count_threshold)
+        {
+            closing = 1;
+        }
+
+        if (gate_open && !opening && closing)
+        {
+            gate_open = 0;
+            log_error("closing");
+        }
+
+        if (!gate_open && opening)
+        {
+            gate_open = 1;
+            log_error("opening");
+        }
+
+
+
+
+        // log_error("gate open: %d", gate_open);
         static int shown = 0;
         for (int i = 0; i < audio_samples_per_packet; i++)
         {
-            if (shown < 1000)
+            if (shown < 500)
             {
                 shown++;
-                log_error("%02d)  %d", i, audio_frame_out_new[i]);
+                // log_error("%02d)  %d", i, audio_frame_out_new[i]);
             }
 
-            // if (abs(audio_frame_out_new[i]) < 512) audio_frame_out_new[i] = 0;
+            if (!gate_open) audio_frame_out_new[i] = 0;
         }
 
         memcpy(audio_frame_out, audio_frame_out_new, 48);
