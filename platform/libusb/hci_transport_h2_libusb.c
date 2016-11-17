@@ -88,9 +88,9 @@
 
 // for ALT_SETTING >= 1 and 8-bit channel, we need the following isochronous packets
 // One complete SCO packet with 24 frames every 3 frames (== 3 ms)
-#define NUM_ISO_PACKETS (16)
+#define NUM_ISO_PACKETS (3)
 // results in 9 bytes per frame
-#define ISO_PACKET_SIZE (256)
+#define ISO_PACKET_SIZE (17)
 
 // 49 bytes is the max usb packet size for alternate setting 5 (Three 8 kHz 16-bit channels or one 8 kHz 16-bit channel and one 16 kHz 16-bit channel)
 // note: alt setting 6 has max packet size of 63 every 7.5 ms = 472.5 bytes / HCI packet, while max SCO packet has 255 byte payload
