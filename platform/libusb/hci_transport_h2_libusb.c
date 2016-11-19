@@ -657,6 +657,7 @@ static int prepare_device(libusb_device_handle * aHandle){
 
     int r;
     int kernel_driver_detached = 0;
+    int kernel_driver_detached_intf1 = 0;
 
     // Detach OS driver (not possible for OS X and WIN32)
 #if !defined(__APPLE__) && !defined(_WIN32)
@@ -675,6 +676,26 @@ static int prepare_device(libusb_device_handle * aHandle){
             return r;
         }
         kernel_driver_detached = 1;
+    }
+    log_info("libusb_detach_kernel_driver");
+
+
+#ifdef ENABLE_SCO_OVER_HCI
+    r = libusb_kernel_driver_active(aHandle, 1);
+    if (r < 0) {
+        log_error("libusb_kernel_driver_active intf 1 error %d", r);
+        libusb_close(aHandle);
+        return r;
+    }
+
+    if (r == 1) {
+        r = libusb_detach_kernel_driver(aHandle, 1);
+        if (r < 0) {
+            log_error("libusb_detach_kernel_driver intf 1 error %d", r);
+            libusb_close(aHandle);
+            return r;
+        }
+        kernel_driver_detached_intf1 = 1;
     }
     log_info("libusb_detach_kernel_driver");
 #endif
@@ -710,8 +731,8 @@ static int prepare_device(libusb_device_handle * aHandle){
     r = libusb_claim_interface(aHandle, 1);
     if (r < 0) {
         log_error("Error claiming interface %d", r);
-        if (kernel_driver_detached){
-            libusb_attach_kernel_driver(aHandle, 0);
+        if (kernel_driver_detached_intf1){
+            libusb_attach_kernel_driver(aHandle, 1);
         }
         libusb_close(aHandle);
         return r;
@@ -1081,6 +1102,10 @@ static int usb_close(void){
 
             // finally release interface
             libusb_release_interface(handle, 0);
+#ifdef ENABLE_SCO_OVER_HCI
+            libusb_release_interface(handle, 1);
+#endif
+
 #ifdef ENABLE_SCO_OVER_HCI
             libusb_release_interface(handle, 1);
 #endif
