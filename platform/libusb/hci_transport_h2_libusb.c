@@ -566,11 +566,11 @@ static void scan_for_bt_endpoints(void) {
                     break;
                 case LIBUSB_TRANSFER_TYPE_ISOCHRONOUS:
                     if (endpoint->bEndpointAddress & 0x80) {
-                        if (sco_in_addr || endpoint->wMaxPacketSize == 0) continue;
+                        if (sco_in_addr) continue;
                         sco_in_addr = endpoint->bEndpointAddress;
                         log_info("-> using 0x%2.2X for SCO Data In", sco_in_addr);
                     } else {
-                        if (sco_out_addr || endpoint->wMaxPacketSize == 0) continue;
+                        if (sco_out_addr) continue;
                         sco_out_addr = endpoint->bEndpointAddress;
                         log_info("-> using 0x%2.2X for SCO Data Out", sco_out_addr);
                     }
