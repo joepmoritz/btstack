@@ -657,17 +657,19 @@ static int prepare_device(libusb_device_handle * aHandle){
     log_info("libusb_detach_kernel_driver");
 #endif
 
-    // const int configuration = 1;
-    // log_info("setting configuration %d...", configuration);
-    // r = libusb_set_configuration(aHandle, configuration);
-    // if (r < 0) {
-    //     log_error("Error libusb_set_configuration: %d", r);
-    //     if (kernel_driver_detached){
-    //         libusb_attach_kernel_driver(aHandle, 0);
-    //     }
-    //     libusb_close(aHandle);
-    //     return r;
-    // }
+#endif
+
+    const int configuration = 1;
+    log_info("setting configuration %d...", configuration);
+    r = libusb_set_configuration(aHandle, configuration);
+    if (r < 0) {
+        log_error("Error libusb_set_configuration: %d", r);
+        if (kernel_driver_detached){
+            libusb_attach_kernel_driver(aHandle, 0);
+        }
+        libusb_close(aHandle);
+        return r;
+    }
 
     // reserve access to device
     log_info("claiming interface 0...");
