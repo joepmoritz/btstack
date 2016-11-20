@@ -117,14 +117,14 @@ FILE * msbc_file_out;
 
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_SINE
 
-// input signal: pre-computed sine wave, at 8000 kz
-static const uint8_t sine_uint8[] = {
-      0,  15,  31,  46,  61,  74,  86,  97, 107, 114,
-    120, 124, 126, 126, 124, 120, 114, 107,  97,  86,
-     74,  61,  46,  31,  15,   0, 241, 225, 210, 195,
-    182, 170, 159, 149, 142, 136, 132, 130, 130, 132,
-    136, 142, 149, 159, 170, 182, 195, 210, 225, 241,
-};
+// // input signal: pre-computed sine wave, at 8000 kz
+// static const uint8_t sine_uint8[] = {
+//       0,  15,  31,  46,  61,  74,  86,  97, 107, 114,
+//     120, 124, 126, 126, 124, 120, 114, 107,  97,  86,
+//      74,  61,  46,  31,  15,   0, 241, 225, 210, 195,
+//     182, 170, 159, 149, 142, 136, 132, 130, 130, 132,
+//     136, 142, 149, 159, 170, 182, 195, 210, 225, 241,
+// };
 
 
 // input signal: pre-computed sine wave, 160 Hz at 16000 kHz
@@ -142,14 +142,15 @@ static const int16_t sine_int16[] = {
 };
 
 static int phase = 0;
-static void sco_demo_sine_wave_int8(int num_samples, int8_t * data){
-    int i;
-    for (i=0; i<num_samples; i++){
-        data[i] = (int8_t)sine_uint8[phase];
-        phase++;
-        if (phase >= sizeof(sine_uint8)) phase = 0;
-    }  
-}
+
+// static void sco_demo_sine_wave_int8(int num_samples, int8_t * data){
+//     int i;
+//     for (i=0; i<num_samples; i++){
+//         data[i] = (int8_t)sine_uint8[phase];
+//         phase++;
+//         if (phase >= sizeof(sine_uint8)) phase = 0;
+//     }  
+// }
 
 static void sco_demo_sine_wave_int16(int num_samples, int16_t * data){
     int i;
@@ -463,6 +464,8 @@ static void sco_report(void){
     printf("SCO: sent %u, received %u\n", count_sent, count_received);
 }
 
+int8_t audio_frame_loop[24];
+
 void sco_demo_send(hci_con_handle_t sco_handle){
 
     if (!sco_handle) return;
@@ -476,7 +479,7 @@ void sco_demo_send(hci_con_handle_t sco_handle){
     little_endian_store_16(sco_packet, 0, sco_handle);
     // set len
     sco_packet[2] = sco_payload_length;
-    const int audio_samples_per_packet = sco_payload_length;    // for 8-bit data. for 16-bit data it's /2
+    // const int audio_samples_per_packet = sco_payload_length;    // for 8-bit data. for 16-bit data it's /2
 
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_SINE
     if (negotiated_codec == HFP_CODEC_MSBC){
@@ -492,7 +495,8 @@ void sco_demo_send(hci_con_handle_t sco_handle){
 
         sco_demo_fill_audio_frame();
     } else {
-        sco_demo_sine_wave_int8(audio_samples_per_packet, (int8_t *) (sco_packet+3));
+        memcpy(&sco_packet[3], audio_frame_loop, sco_payload_length);
+        // sco_demo_sine_wave_int8(audio_samples_per_packet, (int8_t *) (sco_packet+3));
     }
 #else
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_ASCII
@@ -524,6 +528,8 @@ void sco_demo_receive(uint8_t * packet, uint16_t size){
 
     count_received++;
     // if ((count_received % SCO_REPORT_PERIOD) == 0) sco_report();
+
+    memcpy(audio_frame_loop, &packet[3], size - 3);
 
 
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_SINE
