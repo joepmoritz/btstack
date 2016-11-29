@@ -628,12 +628,22 @@ void sco_demo_receive(uint8_t * packet, uint16_t size){
     int audio_size = size;
     audio_size = (audio_size - 3) / 2;
 
-    // log_error("Just from btstack:");
-    for (int i = 0; i < audio_size; i++)
+    log_error("Just from btstack:");
     {
-        // log_error("%02d)  %d", i, audio_frame_out_new[i]);
-        // if (abs(audio_frame_out_new[i]) < 512) audio_frame_out_new[i] = 0;
+        int i = 0;
+        uint8_t* a = &packet[0];
+        log_error("%d) %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+            size,
+            a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++],
+            a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++],
+            a[i++], a[i++], a[i++]);
     }
+
+    // for (int i = 0; i < audio_size; i++)
+    // {
+    //     log_error("%02d)  %d", i, audio_frame_out_new[i]);
+    //     if (abs(audio_frame_out_new[i]) < 512) audio_frame_out_new[i] = 0;
+    // }
 
 
 
@@ -644,6 +654,7 @@ void sco_demo_receive(uint8_t * packet, uint16_t size){
 
         return;
     }
+//  dump_data = 1;
     if (dump_data){
         printf("data: ");
 #if SCO_DEMO_MODE == SCO_DEMO_MODE_ASCII
