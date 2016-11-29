@@ -53,6 +53,9 @@
 #include "wav_util.h"
 #endif
 
+#define SIGNAL_PROCESSING 0
+
+
 // configure test mode
 #define SCO_DEMO_MODE_SINE		0
 #define SCO_DEMO_MODE_ASCII		1
@@ -342,11 +345,6 @@ static void sco_demo_receive_CVSD(uint8_t * packet, uint16_t size){
     const int samples_to_write = btstack_min(num_samples, num_samples_to_write);
     
 
-    // for (int i = 0; i < num_samples; ++i)
-    // {
-    //     audio_frame_out_new[i] = little_endian_read_16(packet+3, 3 + 2 * i);
-    // }
-
     memcpy(audio_frame_out_new, (int16_t*)(packet+3), 2 * num_samples);
     // btstack_cvsd_plc_process_data(&cvsd_plc_state, (int8_t *)(packet+3), num_samples, audio_frame_out);
 
@@ -506,10 +504,7 @@ void sco_demo_send(hci_con_handle_t sco_handle){
         memset((int8_t *) (sco_packet+3), 0, audio_samples_per_packet);
         // wav_synthesize_sine_wave_int8(audio_samples_per_packet, (int8_t *) (sco_packet+3));
         
-
-        // audio_frame_out[6] = (int16_t)((audio_frame_out[5] + audio_frame_out[7]) / 2);
-        // audio_frame_out[14] = (int16_t)((audio_frame_out[13] + audio_frame_out[15]) / 2);
-        // audio_frame_out[23] = (int16_t)((audio_frame_out[22] + audio_frame_out_new[0]) / 2);
+#if SIGNAL_PROCESSING
         memcpy((int16_t*)(sco_packet+3), audio_frame_out, sco_payload_length);
 
         static const int gate_open_threshold = 5000;
@@ -580,6 +575,9 @@ void sco_demo_send(hci_con_handle_t sco_handle){
         }
 
         memcpy(audio_frame_out, audio_frame_out_new, 48);
+#else
+        memcpy((sco_packet+3), audio_frame_out_new, sco_payload_length);
+#endif
 
     }
 #else
