@@ -612,32 +612,112 @@ void sco_demo_receive(uint8_t * packet, uint16_t size){
     // if ((count_received % SCO_REPORT_PERIOD) == 0) sco_report();
 
 
+    int sco_payload_length = size - 3;
+    int num_samples = sco_payload_length / 2;
 
-#if SCO_DEMO_MODE == SCO_DEMO_MODE_SINE
-#ifdef SCO_WAV_FILENAME
-    if (negotiated_codec == HFP_CODEC_MSBC){
-        sco_demo_receive_mSBC(packet, size);
-    } else {
-        sco_demo_receive_CVSD(packet, size);
+    // if (count_received % 100 == 0)
+    // {
+    //     int i = 0;
+    //     uint8_t* a = &packet[0];
+
+    //     char buffer[256];
+    //     sprintf(buffer, "%d) %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+    //         size,
+    //         a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++],
+    //         a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++],
+    //         a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++],
+    //         a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++],
+    //         a[i++], a[i++], a[i++]);
+    //     buffer[size * 3 + 4] = 0;
+    //     log_error("%s", buffer);
+    // }
+
+
+    {
+        int8_t* audio_packet = &packet[3];
+
+        static int vote_count_total = 0;
+        static int vote_count_swapped = 0;
+
+        if (vote_count_total < 1000)
+        {
+            int this_vote_count_normal = 0;
+            int this_vote_count_swapped = 0;
+
+            for (int i = 0; i < sco_payload_length; i += 2)
+            {
+                this_vote_count_normal += (abs(audio_packet[i]) > abs(audio_packet[i + 1]));
+                this_vote_count_swapped += (abs(audio_packet[i]) < abs(audio_packet[i + 1]));
+            }
+
+            if (this_vote_count_normal + this_vote_count_swapped > 17)
+            {
+                vote_count_total++;
+                this_vote_count_normal += (this_vote_count_normal > this_vote_count_swapped * 2);
+                vote_count_swapped += (this_vote_count_swapped > this_vote_count_normal * 2);
+            }
+
+            log_error("vote_count_total: %d  vote_count_swapped: %d", vote_count_total, vote_count_swapped);
+
+
+            // send silence until we are more certain
+            memset(audio_packet, 0, sco_payload_length);
+        }
+        else if (vote_count_swapped > 500)
+        {
+            // #define SHIFT_FIX 0
+            // #define SWAP_FIX 0
+
+            // #if SWAP_FIX
+            // for (int i = 0; i < sco_payload_length; i += 2)
+            // {
+            //     int8_t a = audio_packet[i];
+            //     audio_packet[i] = audio_packet[i + 1];
+            //     audio_packet[i + 1] = a;
+            // }
+            // #endif
+
+            // #if SHIFT_FIX
+            // static int8_t old_byte = 0;
+            // int8_t previous_byte = audio_packet[1];
+
+            // for (int i = 0; i < sco_payload_length; i++)
+            // {
+            //     audio_packet[i + 1] = audio_packet[i];
+            // }
+            // audio_packet[0] = old_byte;
+            // #endif
+        }
     }
-    dump_data = 0;
-#endif
-#endif
 
-
-    int audio_size = size;
-    audio_size = (audio_size - 3) / 2;
-
-    log_error("Just from btstack:");
+    if (count_received % 100 == 0)
     {
         int i = 0;
         uint8_t* a = &packet[0];
-        log_error("%d) %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+
+        char buffer[256];
+        sprintf(buffer, "%d) %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
             size,
             a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++],
             a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++],
+            a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++],
+            a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++], a[i++],
             a[i++], a[i++], a[i++]);
+        buffer[size * 3 + 4] = 0;
+        log_error("%s", buffer);
     }
+
+    #if SCO_DEMO_MODE == SCO_DEMO_MODE_SINE
+    #ifdef SCO_WAV_FILENAME
+        if (negotiated_codec == HFP_CODEC_MSBC){
+            sco_demo_receive_mSBC(packet, size);
+        } else {
+            sco_demo_receive_CVSD(packet, size);
+        }
+        dump_data = 0;
+    #endif
+    #endif
+
 
     // for (int i = 0; i < audio_size; i++)
     // {
