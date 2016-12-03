@@ -119,10 +119,6 @@ static void set_path(bd_addr_t bd_addr){
     strcat(keypath, LINK_KEY_SUFFIX);
 }
 
-void link_key_set_db_number(char c){
-    keynumber[0] = c;
-}
-
 
 // Device info
 static void db_open(void){

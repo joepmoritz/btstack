@@ -608,7 +608,6 @@ static void scan_for_bt_endpoints(void) {
 // returns index of found device or -1
 static int scan_for_bt_device(libusb_device **devs, int start_index) {
     int i;
-    int skip_remaining = bt_device_skip;
     for (i = start_index; devs[i] ; i++){
         dev = devs[i];
         int r = libusb_get_device_descriptor(dev, &desc);
@@ -631,10 +630,7 @@ static int scan_for_bt_device(libusb_device **devs, int start_index) {
             // Detect USB Dongle based on whitelist
             is_known_bt_device(desc.idVendor, desc.idProduct))
         {
-            if (skip_remaining-- <= 0) {
-                return i;
-            }
-
+            return i;
         }
     }
     return -1;
@@ -1231,10 +1227,6 @@ static void usb_register_packet_handler(void (*handler)(uint8_t packet_type, uin
 }
 
 static void dummy_handler(uint8_t packet_type, uint8_t *packet, uint16_t size){
-}
-
-void set_usb_bt_device_skip(int skip) {
-    bt_device_skip = skip;
 }
 
 // get usb singleton
